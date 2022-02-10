@@ -1,0 +1,48 @@
+*****************************************************************
+*    DEVELOPPEMENTS AUTOUR DE MICROCONTROLEUR			*
+*								*
+*								*
+*****************************************************************
+
+La carte NUCLEO est un moyen économique et flexible pour
+construire des prototypes sur la base de microcontrôleur STM32.
+Le support comporte La connectivité Arduino et un débogueur/
+programmeur ST-LINK/V2.
+
+Choix: 	ARM-476RG 
+       	Processeur ARM@32bits Cortex@-M4
+       	Fréquence CPU maximale de 80MHZ
+	1Mo Flash
+	128Ko de SRAM
+	VDD de 1.71V à 3,6V
+
+Clock Sources:
+	4 à 48 MHz oscillateur
+	32 KHZ oscillateur pour RTC
+
+
+
+
+Comments développer sur le stm32 ?
+
+  - CubeMX    STM32CubeL4
+    C'est l'environnement recommandé par stm32, plutôt interface
+    graphique et programmation avec les fonctions dédiés, c'est
+    la plus simple et la plus utilisée, avec des librairies à jour.
+    https://www.st.com/en/development-tools/stm32cubemx.html#tools-software
+
+  - En langage C et des accès aux registres.
+    Bien sûr il faut connaître les registres et le fonctionnement, c'est
+    la façon la plus hard du développement.
+
+  - En langage C./C++ mais à l'aide des librairies HAL et ..., c'est une
+    un moyen de développer de façon intermédiaire, qui offre une possibilité
+    de reconfiguration à la carte des e/s.
+
+
+
+sites:
+------
+https://www.st.com/content/st_com/en.html
+
+	
