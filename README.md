@@ -1,7 +1,7 @@
 # stm32
 development and architecture stuff on stm32
 
-[![st_logo](./img/nucleo_L476RG)](https://www.st.com/content/st_com/en.html) <br> 
+[![st_logo](./img/nucleo_L476RG.JPG)](https://www.st.com/content/st_com/en.html) <br> 
 
 
    

@@ -1,8 +1,8 @@
-*****************************************************************
-*    DEVELOPPEMENTS AUTOUR DE MICROCONTROLEUR			*
-*								*
-*								*
-*****************************************************************
+*************************************************************************************************************************
+*   				 DEVELOPPEMENTS AUTOUR DE MICROCONTROLEUR						*
+*		     				STM32									*
+*															*
+*************************************************************************************************************************
 
 La carte NUCLEO est un moyen économique et flexible pour
 construire des prototypes sur la base de microcontrôleur STM32.
@@ -12,7 +12,7 @@ programmeur ST-LINK/V2.
 Choix: 	ARM-476RG 
        	Processeur ARM@32bits Cortex@-M4
        	Fréquence CPU maximale de 80MHZ
-	1Mo Flash
+	1Mo Flash (1Mbyte)
 	128Ko de SRAM
 	VDD de 1.71V à 3,6V
 
@@ -24,6 +24,7 @@ Clock Sources:
 
 
 Comments développer sur le stm32 ?
+---------------------------------
 
   - CubeMX    STM32CubeL4
     C'est l'environnement recommandé par stm32, plutôt interface
@@ -37,7 +38,149 @@ Comments développer sur le stm32 ?
 
   - En langage C./C++ mais à l'aide des librairies HAL et ..., c'est une
     un moyen de développer de façon intermédiaire, qui offre une possibilité
-    de reconfiguration à la carte des e/s.
+    de reconfiguration à la carte des e/s sans charger de nouveau le programme.
+
+  -Et bien d'autres solutions ./docs/ide
+                              avec un exemple sur led, uart, dma.
+
+Architecture Logiciel du microcontrôleur :
+-----------------------------------------
+
+ALU (unité arithmétique et logique) 
+c’est la partie opérative du système la seule capable de faire des calculs et 
+communique avec la mémoire via des registres.
+L’ALU pour gagner en rapidité et efficacité, elle est connectée à des registres dont l’accès peut se faire 
+en un seul cycle d’horloge, ces registres sont :
+	- soit à usage général (stocks des informations alimentant les calculs).
+	- soit spécifiques, dédiés à une tâche très précise.
+
+L'Architecture ARM de type RISC repose sur 17 REGISTRES :
+Les registres permettent de dialoguer avec le microcontrôleur dans le programme:
+  .Registres généraux : R0 à R12.
+  .Registre SP (pointeur de pile) R13. C’est la PILE SYSTEME, elle contient l’adresse accessible en mémoire vive 
+            pour stocker des informations temporaires mais vitales pour le bon déroulement de l’ensemble.
+  .Registre LR (de lien) R14.
+  .Registre PC (pointeur de programme) R15. Contient l’@ courante du programme en cours et progresse dans l’exécution 
+            du programme.
+  .Registre xPSR (status) se décline (APSR, EPSR,IPSR). 
+     Et se complète avec 4 registres spéciaux
+     PRIM, FAULTMASK, BASEPRI (gestion d’exception), CONTROL (gère le niveau de privilège)
+
+
+La zone mémoire RAM (sans mémoire après une coupure d’alimentation) est prédéfinie au départ par le programme. 
+Cette zone est pointée par le registre SP et évolue au gré des écritures/lectures dans une structure LIFO (pile d’assiette).
+
+L’architecture ARM de type Harvard sépare physiquement les accès à mémoire code (stockage du programme) des accès à 
+la mémoire données (variables programme, accessible en lecture/écriture)
+
+Basé sur un jeu d’instruction RISC (Reduced Instruction Set Computer)
+L’ALU peut mettre à jour les flag (nombre de 5) dans xPSR .
+Indicateur C (Carry) retenue lors de calcul débordement de la représentation non signée lors de l’instruction précédente 
+             donc le calcul est partiellement faux (C=1) comme 8 bits la somme 200+60 dépasse le max 255.
+Indicateur Z (Zero) = 1 si le résultat de l’instruction donne zéro.
+Indicateur N (Négative) contient le bit de poids fort celui qui contient la plus grande valeur comme celui de gauche 
+             pour une écriture de gauche à droite. Pour les valeurs signé N=1 donc valeur négative.
+Indicateur V(Overflow) =1 s’il y a un débordement de la représentation signée et dons le résultat signé est faux 
+            (8bits : 140+40 en signé on peut juste entre -128 et 127)
+Indicateur Q (saturation flag) pour USAT et SSAT =1 si ces instructions sont saturé le registre traité.
+
+Le microcontrôleur à la capacité de n’activer qu’en fonction des besoins certaines parties du microcontrôleur 
+ou d’endormir le circuit complètement s’il n’est pas utilisé.
+
+
+Périphériques :
+--------------
+Pour dialoguer avec l’extérieur nous avons des E/S GPIO (General Purpose Input/Output)
+
+Le timer pour compter/décompter les changements d’état (front montant/descendant) d’un signal binaire, on parle de counter (compteur).
+Le système voit une horloge synchrone dont la fréquence est fixe et connue. 
+Il peut être overflow ou underflow car le registre a une capacité finie comme un registre de 16 bits on compte 0xFFF et un front 
+il bascule à 0 et les informations accumulées sont perdues, mais un tel évènement est détectable car l’unité émet une requête 
+d’interruption pour que le programme puisse réagir en conséquence.
+Sinon plutôt que repartir à zéro on peut repartir d’une valeur prédéfinie dans le registre ad-hoc (reload). 
+Le temps entre 2 débordements est alors modifié. 
+Comme la base de temps est ajustable (diviseur de fréquence) et le nombre de front est programmable, on peut intervenir entre 
+2 requêtes d’interruptions successives (reload), il est possible de mettre en place des évènements logiciels synchrones de façon 
+précise à l‘aide de ces timers. 
+On trouve le watchdog qui s’assure que le système ne reste pas bloqué dans le traitement qu’il exécute (boucle infinie), 
+c’est un sablier qu’il faut venir retourner avant qu’il ne soit vide. Sinon une alerte interruption est levée.
+
+Les Capture permet de mesurer le temps qu’un bouton poussoir a été appuyé. 
+L’unité capture est associé à un signal de type binaire sur une broche, à un timer qui mesure le temps qui passe et à un registre 
+pour stocker la valeur capturée du timer lorsque l’évènement apparait.
+
+Les Compare (symétrique) toujours un signal binaire mais le timer est remplacé par un compteur qui compte les évènement (les fronts)
+sur une broche. Lorsque le compteur égale la valeur il déclenche une interruption. 
+
+L’ADC (convertisseur analogique-numérique concerne les capteurs de température, pression, distance, accélération …) 
+L’électronicien équipe le process d’un capteur qui transforme cette grandeur en volt de type analogique compatible avec notre microcontrôleur [0-5V].
+Brancher sur un multiplexeur et que logiciellement on sélectionne la voies. 
+L’ADC a une résolution, la quantité de valeurs entières que peut prendre l’ADC après conversion.
+
+PWM la symétrique d’un ADC est un DAC (digital-analog converter: convertisseur numérique-analogique ) permet de transformer une valeur 
+numérique en analogique, mais peu courante car cela consomme beaucoup est peut être remplacé par un PWM.
+
+
+Les bus pour envoyer des données sur un simple fil avec des 0 et 1.
+Le protocole le plus simple est la liaison asynchrone (Universal Asynchronous Receiver Transmitter). 
+Un fil pour émettre et un pour recevoir et une masse commune. Les données transitent octet par octet à une vitesse fixée à l’avance.
+Il est complexifié avec une horloge commune qui permet de synchroniser les données, on obtient une
+Universal Synchronous/Asynchronous Receiver Transmitter (USART) comme rs232, mais insuffisant il faut augmenter le débit, 
+sécuriser les données pour s’assurer que ce qui est envoyé est correctement reçu. 
+Et il faut aussi plus de 2 systèmes ensemble comme un réseau.
+
+Pour répondre aux besoins de communication, nous avons les protocoles industriels bus industriel ou terrain : I2C, SPI CAN Modbus …
+On peut aussi prendre un microcontrôleur simple et ajouter le périphérique manquant à travers un bus industriel si ce protocole 
+équipe le circuit, comme un DAC absent, mais on peut ajouter une extension électronique et le piloter avec une interface 
+I2C ou SPI pour avoir accès à cette conversion numérique analogique.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
