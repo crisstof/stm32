@@ -39,9 +39,16 @@ Comments développer sur le stm32 ?
   - En langage C./C++ mais à l'aide des librairies HAL et ..., c'est une
     un moyen de développer de façon intermédiaire, qui offre une possibilité
     de reconfiguration à la carte des e/s sans charger de nouveau le programme.
+     
 
   -Et bien d'autres solutions ./docs/ide
                               avec un exemple sur led, uart, dma.
+
+Les pilotes de périphériques sont fréquemment mis à jour par les fournisseurs de silicium. Maintenir le la prise en 
+charge cible de milliers de microcontrôleurs serait un énorme tâche chronophage. Nous recommandons donc à tous les 
+développeurs STM32 d'utiliser le Générateur de code STM32CubeMX pour générer les dernières versions des pilotes, 
+des piles et middleware pour votre projet.
+
 
 Architecture Logiciel du microcontrôleur :
 -----------------------------------------

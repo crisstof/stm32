@@ -1,6 +1,6 @@
 *************************************************************************************************************************
 *   				 DEVELOPPEMENTS AUTOUR DE MICROCONTROLEUR						*
-*		     				STM32 AVANCED								*
+*		     				STM32 ADVANCED								*
 *															*
 *************************************************************************************************************************
 Le stm32 est sur la base ARM qui utilise la convention little endian donc du poids faible en premier vers le poids fort.
@@ -178,12 +178,174 @@ int main(void)
    }
 }
 
+*************************************************************************************************************************
+*     			LES TIMERS ou Compteur électronique								*
+*************************************************************************************************************************
+Un timer est un compteur électronique, bon rien d'extraordinaire jusqu'ici.
+Il a une résolution qui dépend de son architecture et contraint l’amplitude des valeurs sur lesquelles il peut compter.
+Un timer avec une résolution de 8 bits pourra compter entre 0 à 255. 
+Un timer de  8 bits entre 0 à 255     [Sa résolution est de 8bits et l'amplitude est de 0 à 255 top]
+	    16 bits entre 0 à 65 535 
+	    32 bits entre 0 à 4 294 967 295.
+Dans des architectures on peut mettre en série 2 times du processeur ainsi avec 2 times 16 bits en sérialisant,
+nous pouvons fabriquer un timer de 32 bits.
+
+Qu'est ce qu'on peut compter ?
+----------------------------
+L’incrémentation d’un timer se fait sur des évènements et sont générés par une horloge avec une fréquence fixée. 
+	  _   _	  _									(Et oui le timer compte le temps)
+Horloge _| |_| |_| |_  ----> Timer
+
+Il peut aussi compter des évènements non périodiques comme un signal venant d’une broche représentant
+des fronts montants et descendants on parle plutôt de compteur.
+          _      ____
+Broche___| |____|    |_  ----> Timer
+
+Conception du Timer:     -----------------------TIMER-----------------------------------
+			|	      _      _						|
+	  _   _	  _   	|	  ___| |____| |__					|					
+Horloge _| |_| |_| |_ --|--->Prescaler  -----------------> Compteur------------------	|
+			|       				|    		    |	|
+			|					|    		    |   |
+			|					-----<--Autoreload<--	|
+			|							|-------|----> débordement	
+			 ---------------------------------------------------------------
+
+
+L’entrée d’horloge d’un timer est souvent précédée d’un diviseur (prescaler). 
+	. Son rôle est d’opérer une première division de la fréquence de l’horloge pour ralentir 
+	  la fréquence de comptage du timer (son intérêt dans la pratique).
+
+L’utilisation classique d’un timer va consister à réagir au débordement (overflow) de son compteur.
+En effet la résolution du timer étant bornée, son incrémentation va inévitablement conduire à un débordement, 
+c’est-à-dire que l’incrément suivant dépasse la capacité du compteur. 
+S’il survient, le compteur est remis à zéro et un évènement interne est généré pour signaler cette rupture 
+dans la séquence de comptage.
+
+Afin de mieux contrôler le débordement, le compteur est associé à un registre dit autoreload. 
+	. Celui-ci contient la valeur à laquelle le compteur va déborder, même s’il n’a pas atteint sa capacité maximale. 
+	
+
+Le timer est incrémenté à chaque impulsion de l’horloge et lorsque son compteur atteint la valeur de l’autoreload, il déborde.
+
+Calculer les paramètres d’un timer:
+----------------------------------
+En connaissant la fréquence de l’horloge entrante du timer et en réglant le prescaler et l’autoreload,
+il est possible de régler finement la fréquence à laquelle le timer déborde ou pour un signal pwm.
+
+Attention dans le cas du stm32
+****************************** 
+le prescaler vaut 1 si le registre de configuration PSC à est à 0 côté informatique.
+                  2 s’il est à 1
+	          3 s’il est à 2
+                  4 s’il est à 3
+Autoreload(ARR) la valeur entre 0 et ARR (la valeur dépend de la résolution du pwm)
+Prescaler(PSC) divise la fréquence d'entrée de l'horloge sur un stm32 le PSC vaut PSC+1. 
+			  !!!!!(Ne pas oublier que le compteur commence à 0 d'où le +1 dans les expressions)!!!
+
+
+						CONFIGURER UN TIMER
+Paramètre et calcul d'un timer:
+------------------------------
+                  T_timer        
+   T_horloge =-------------------   ==>Période à laquelle le timer déborde: T_timer = T_horloge * PSC * (ARR+1)
+               ((PSC+1)*(ARR+1))   
+
+Comment régler le prescaler et l'autoreload pour un débordement du timer toutes les secondes ?
+  On dit le prescaler à 1.
+       T_timer                    1
+ ARR = ---------------  -1  = ------------ -1 = 72 000 000 -1
+       T_horloge*PSC              1
+                              ------------
+                              72 000 000
+
+C'est possible pour un timer sur 32bits(4 294 967 295) mais pas un 16bits.
+Pour configurer il faut connaitre sa résolution et faire attention à son amplitude des valeurs disponibles.
+Pour trouver une configuration faisable, il faut aussi utiliser le prescaler.
+Si on fixe le prescaler à 7200 nous avons un résultat acceptable pour un 16bits. (0-65535)
+
+           1
+ ARR = ------------ -1 = 10 000 - 1
+           7200
+       ------------
+        72 000 000
+-------------------------------------------------------------------------------------------------------------------
+Notre cas c'est une horloge de 80Mhz, pour régler le ARR et PSC pour un déborduement du timer toutes les secondes.
+
+Pou un timer 8bits avec horloge 1khz laquelle permet d’obtenir un timer avec une période de 1Hz :
+Prescaler :4 et autoreload 249
+Ftimer= fhorloge / (prescaler*(autoreload+1))
+Il doit prendre en considération la résolution du timer (taille du compteur)
+Autoreload à 499 pas de sens car le compteur s’incrémente que jusqu à 255 (8bit) !!!  on, reste à 249.
+
+                     F_horloge             10000
+  FoutPWM=F_timer =-------------------=----------------- = 1HZ (registre de configuration pour un PSC prescaler à 4)
+                    (PSC * (ARR+1))    (4 * (249+1))    
 
 
 
+-------------------------------------------------------------------------------------------------------------------
+
+
+                                CONFIGURER UN PWM
+
+faire clignoter une LED sur le port CH1 de TIM3 en pwm en fréquence 20khz ?
+--------------------------------------------------------------------------
+PSC est à 0 donc le PRESCALER est à 1.
+Fréquence horologe du stm32 = 72MHZ = 72 000 000HZ
+
+Formule_1: avec le psc en registre de configuration à 0
+
+               TIM(x)CLCK         72 000 000
+   FoutPWM =-------------------=----------------- = 20 0000 = 20KHZ
+            ((PSC+1)*(ARR+1))   ((0+1)*(3599+1))                      
+
+Formule_2: le véritable PSC (prescaler)
+
+                  Fhorloge       72 000 000
+  FoutPWM =-------------------=----------------- = 20KHZ
+           (PSC * (ARR+1))    (1 * (3599+1)=                         
+
+Pour nous, nous avons le stm32 avec:
+CoreMark 80MHz
+Clock source
+4 oscillateur quartz 48Mhz
+32Khz crystal oscillateur pour RTC
+Nous voulons régler l'autoreload (ARR)
+         Fhorloge               80Mhz
+ARR = ----------------- - 1 = --------------= 3599
+      (FoutPWM * PSC)           (20 000 *1
+
+
+Nous allons régler le Duty-Cycle: La durée de l’impulsion.
+Cela se fait en fixant une valeur dans le registre CCR1 du timer
+Pour commencer fixons à 20% cette durée soit (20% de la résolution du pwm) soir une valeur de 719.
+       CCR                         DC
+DC = (-----) * 100   <=>     CCR=(-----) * ARR      (DC un pourcentage et CCR le registre où l'on rentre le rapport cyclique)
+       ARR                         100
+
+de 0 à ARR donc 3999 donc 20% de 3999=719
 
 
 
+Calcul la période et le rapport cyclique de l'impulsion du PWM ?
+---------------------------------------------------------------
+5ms=>0.005sec
+2KHZ=>2000HZ
+La fréquence du compteur est de 10KHZ divisée par 5, soit 2KHZ
+La période du PWM est égale à:
+                  1                    1
+   TPWM =-------------------=-------------- =
+           fclock * (ARR+1)    200 * (0+1)                      
+
+
+
+-------------------------------------------------------------------------------------------------------------------
+
+
+*************************************************************************************************************************
+*     			LE NVIC	Nested Vectored Interrupt Controller							*
+*************************************************************************************************************************
 
 
 
