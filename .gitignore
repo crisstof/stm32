@@ -4,6 +4,7 @@
 #Enlever les fichiers word
 #pour garder que les pdf
 /stm32_Initiation/stm32_Initiation_Programs.docx
+/stm32_practices/stm32_UART.docx
 stm32_introduction_guetting_Started.docx
 
 # Ignoring directories
