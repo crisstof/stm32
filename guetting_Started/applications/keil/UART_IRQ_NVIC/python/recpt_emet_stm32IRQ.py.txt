@@ -1,0 +1,34 @@
+#!/usr/bin/env python
+# -*- coding: utf-8 -*-
+# Test du port série
+#reception carte stm init puis emet salut et on reçoit salut
+import serial
+ser = serial.Serial("/dev/ttyS0", baudrate=9600, timeout=10.0)
+print("Port serie :  " + ser.name)
+
+print("\n-----Carte stm32 si ok-----\n")
+message = ser.readline()
+print(type(message))
+print(message)
+chaine = message.decode()
+print(type(chaine))
+print("voici le message recu du stm32: "+ chaine)
+
+print("\n-----Carte stm32 si ok-----\n")
+messageAEnvoyer = "Salut\r"
+ser.write(messageAEnvoyer.encode())
+print("le message envoye a la carte est: "+messageAEnvoyer)
+
+print("\n-----Echo de la carte stm32-----\n")
+echo = ser.readline()
+print(type(echo))
+print(echo)
+chaineEcho = echo.decode()
+print(type(chaineEcho))
+print(chaineEcho)
+ser.close()
+
+
+
+
+
