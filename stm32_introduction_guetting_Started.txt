@@ -1,0 +1,106 @@
+*************************************************************************************************************************
+*   				 PREMIER PAS VERS LE DEVELOPPEMENT AUTOUR DU STM32					*
+*		     		       SEARCH/FIND/ESSENTIAL/DOCUMENTATIONS						*
+*						guetting_Started							*
+*************************************************************************************************************************
+Prenons notre liberté de développement autour du stm32
+Avant de commencer à développer il est primordiale d'aller chercher nous même les informations.
+Pour se repérer dans le STM32, il nous faut 2 documentations essentielles:
+Le datasheet (organisatin interne du micro, spécifications électrique, etc)                  [STM32L476xx]
+   https://www.st.com/resource/en/datasheet/stm32l476rg.pdf
+Le reference manual (foctionnement détaillé de chaque périphérique et registres associés)    [RM0351]
+   https://www.st.com/resource/en/reference_manual/dm00083560-stm32l4x5-and-stm32l4x6-advanced-arm-based-32-bit-mcus-stmicroelectronics.pdf
+
+Bien sur si l’on développe sur carte nucleo pour nos tests il faut la petite documentation   [UM1724]
+    https://www.st.com/en/evaluation-tools/nucleo-l476rg.html#documentation
+
+Pour se connecter il nous faut le driver STLink/V2: stsw-link009_v2.0.2.     
+    https://www.st.com/en/development-tools/stsw-link009.html
+
+Pour programmer, nous avons plusieurs choix possible:
+Nous allons choisir Atollic de TrueStudio car il permet de prendre en compte la compilation arm et la possibilité de programmer en C/C++ et
+d'accéder au registre et d'intégrer une architecture personnalisée.
+Nous allons aussi utiliser CubeMX pour comprendre en cas de difficulté de fonctionnement puisqu'il utilise les dernières bibliothèques et
+cela m'a permis de débuguer certaines fois, de plus cela permet de compenser les faibles tutos sur Atollic.
+
+Mais pour débuter facilement sans prise de tête nous allons utiliser Keil
+     https://www.keil.com/demo/eval/arm.htm#!#DOWNLOAD
+Mais pour plus de détaille si on ne trouve pas de tuto ni dans la doc on peut passer par CubeMX et mode debug step by step:
+     Téléchargement : https://www.st.com/en/development-tools/stm32cubemx.html
+     Téléchargement : https://www.st.com/en/development-tools/stm32cubeide.html
+
+ 
+
+
+-----------------------------------------------------------------------------------------------------------------------------------------------
+Mise en place de l'environnement de travail.
+Pour cela nous allons faire clignoter une led la LD2 [PA05] dans l'IDE Keil
+Télécharger l'ide Keil et choisir le microcontrôleur: STMicroelectronic/STM32L476
+				pack :STMicroelectronic STM32L4, STMicroelectronic Nucleo, CMSIS (Cortex Micro Soft Interface Standard)
+					Middleware for keil MDK-Pro et MDK-Plus, attendre le ttéléchargement puis quiter.
+
+
+Pour faire clignoter la led il faut : Activer (AHB2ENR) et régler au besoin l’horloge du périphérique 	[1]
+				    + Activer le registre GPIOA (MODER)					[2]
+			            + Activer le port pin (1 ou 0) (ODR).				[3]
+
+
+#include "stm32l4xx.h"
+  
+int main(void)
+{
+ volatile unsigned int i =0;
+ RCC -> AHB2ENR|= 1<<0;			//[datasheet]  [1]
+ GPIOA->MODER &= 0xFFFFF7FF; 	 //[reference_manual]  [2]	
+   while(1)
+   {for (i= 0; i < 50000; i++)
+	GPIOA -> ODR= (1<<5); //on affecte 1 au bit du rang 5	[reference_manual]  [3]
+                              //GPIOA -> BSRR= (1<<5);
+    for (i = 0; i < 50000; i++)
+	GPIOA -> ODR= (0<<5); //PA5 à 0  ////GPIOA -> BSRR= (1<<21);}	[reference_manual]  [3]
+   }
+}
+Créer un fichier et copier le code enregistrer, mais il faut ajouter se fichier dans notre arborescence 
+on double-click sur le répertoire et on ajoute notre fichier. (dans optionfortarget>debug>use>StLink)
+Compiler et start/stop debug /chargera le programme dans la cible.
+-------------------------------------------------------------------------------------------------------------------------------------------------
+Pour la même chose mais avec stm32CubeMX (configuration des pin et fonctions) ensuite n'oubliez pas l'ide CubeMX
+avec cubeMX on prend de la hauteur avec ses méthodes et architecture (generate c/c++) ensuite nous pouvons choisir notre ide.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
