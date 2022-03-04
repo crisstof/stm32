@@ -11,4 +11,4 @@ stm32_introduction_guetting_Started.docx
 
 # Ignoring directories
 #Enlever tout un répertoire trop volumineux
-#/guetting_Started/applications/keil/UART_IRQ_NVIC/USART_RX_TX_IRQ/
+/guetting_Started/applications/keil/UART/
